@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cleaning Scheduler</title>
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      .schedule-item {
+        background-color: #f8f9fa;
+        border-radius: 4px;
+      }
+      .schedule-item:hover {
+        background-color: #e9ecef;
+      }
+      .chat-container {
+        height: calc(100vh - 200px);
+        overflow-y: auto;
+        scroll-behavior: smooth;
+      }
+      .loading-dots:after {
+        content: " .";
+        animation: dots 1s steps(5, end) infinite;
+      }
+      @keyframes dots {
+        0%,
+        20% {
+          content: " .";
+        }
+        40% {
+          content: " ..";
+        }
+        60% {
+          content: " ...";
+        }
+        80%,
+        100% {
+          content: "";
+        }
+      }
+      .date-input {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease-out;
+      }
+      .date-input.active {
+        max-height: 150px;
+        transition: max-height 0.3s ease-in;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-100 h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-3xl">
+      <header class="text-center mb-8">
+        <h1 class="text-3xl font-bold text-indigo-700">
+          Cleaning Scheduler Assistant
+        </h1>
+        <p class="text-gray-600">
+          Powered By <br />
+          Anurag Sharma (12306403), Bhrigu Kumar Deka (12307066), Sayoun Parui
+          (12306183)
+        </p>
+      </header>
+
+      <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+        <div id="chat-container" class="chat-container p-4 bg-gray-50">
+          <div class="flex mb-4">
+            <div class="flex-shrink-0 mr-3">
+              <div
+                class="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center text-white font-bold"
+              >
+                CS
+              </div>
+            </div>
+            <div class="bg-indigo-100 rounded-lg py-2 px-4 max-w-md">
+              <p>
+                Hi there! I'm your cleaning scheduler assistant. How can I help
+                you today?
+              </p>
+              <p class="text-xs text-gray-500 mt-1">
+                Try saying "Schedule bathroom cleaning for next Tuesday" or
+                "Show my schedule"
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="border-t p-4 bg-white">
+          <div id="date-input" class="date-input mb-3">
+            <div class="flex flex-col">
+              <label for="date-selector" class="text-sm text-gray-600 mb-1"
+                >Select a date for your task:</label
+              >
+              <div class="flex">
+                <input
+                  type="date"
+                  id="date-selector"
+                  class="flex-grow border rounded-l-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                <button
+                  id="date-confirm-btn"
+                  class="bg-indigo-600 text-white px-4 py-2 rounded-r-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  Confirm
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex">
+            <input
+              id="user-input"
+              type="text"
+              placeholder="Type your message here..."
+              class="flex-grow border rounded-l-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+            <button
+              id="send-btn"
+              class="bg-indigo-600 text-white px-4 py-2 rounded-r-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              Send
+            </button>
+          </div>
+
+          <div class="flex justify-between mt-2">
+            <button
+              id="show-schedule-btn"
+              class="text-sm text-indigo-600 hover:text-indigo-800"
+            >
+              Show Schedule
+            </button>
+            <button
+              id="export-btn"
+              class="text-sm text-indigo-600 hover:text-indigo-800"
+            >
+              Export Data
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Generate a persistent user ID (in a real app, use proper authentication)
+      let userId = localStorage.getItem("cleaning_scheduler_user_id");
+      if (!userId) {
+        userId = "user_" + Math.random().toString(36).substring(2, 15);
+        localStorage.setItem("cleaning_scheduler_user_id", userId);
+      }
+
+      // Get DOM elements
+      const chatContainer = document.getElementById("chat-container");
+      const userInput = document.getElementById("user-input");
+      const sendBtn = document.getElementById("send-btn");
+      const showScheduleBtn = document.getElementById("show-schedule-btn");
+      const exportBtn = document.getElementById("export-btn");
+      const dateInput = document.getElementById("date-input");
+      const dateSelector = document.getElementById("date-selector");
+      const dateConfirmBtn = document.getElementById("date-confirm-btn");
+
+      // Initialize variables for context tracking
+      let pendingTaskContext = null;
+
+      // Set default date to tomorrow for the date picker
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      dateSelector.valueAsDate = tomorrow;
+
+      // Add message to chat
+      function addMessage(isUser, text) {
+        const div = document.createElement("div");
+        div.className = "flex mb-4 " + (isUser ? "justify-end" : "");
+
+        if (isUser) {
+          div.innerHTML = `
+                    <div class="bg-indigo-600 text-white rounded-lg py-2 px-4 max-w-md">
+                        <p>${text}</p>
+                    </div>
+                    <div class="flex-shrink-0 ml-3">
+                        <div class="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-gray-700 font-bold">
+                            You
+                        </div>
+                    </div>
+                `;
+        } else {
+          div.innerHTML = `
+                    <div class="flex-shrink-0 mr-3">
+                        <div class="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center text-white font-bold">
+                            CS
+                        </div>
+                    </div>
+                    <div class="bg-indigo-100 rounded-lg py-2 px-4 max-w-md">
+                        <p>${text.replace(/\n/g, "<br>")}</p>
+                    </div>
+                `;
+        }
+
+        chatContainer.appendChild(div);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+      }
+
+      // Add loading indicator
+      function addLoadingIndicator() {
+        const div = document.createElement("div");
+        div.className = "flex mb-4";
+        div.id = "loading-indicator";
+        div.innerHTML = `
+                <div class="flex-shrink-0 mr-3">
+                    <div class="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center text-white font-bold">
+                        CS
+                    </div>
+                </div>
+                <div class="bg-indigo-100 rounded-lg py-2 px-4">
+                    <p class="loading-dots">Thinking</p>
+                </div>
+            `;
+        chatContainer.appendChild(div);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+      }
+
+      // Remove loading indicator
+      function removeLoadingIndicator() {
+        const loadingIndicator = document.getElementById("loading-indicator");
+        if (loadingIndicator) {
+          loadingIndicator.remove();
+        }
+      }
+
+      // Show date picker
+      function showDatePicker() {
+        dateInput.classList.add("active");
+        dateSelector.focus();
+      }
+
+      // Hide date picker
+      function hideDatePicker() {
+        dateInput.classList.remove("active");
+      }
+
+      // Send message to backend
+      async function sendMessage(message) {
+        userInput.value = "";
+        addMessage(true, message);
+        addLoadingIndicator();
+
+        try {
+          const response = await fetch("/api/message", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user_id: userId, message: message }),
+          });
+
+          const data = await response.json();
+          removeLoadingIndicator();
+
+          // Handle schedule display
+          if (data.schedules) {
+            let scheduleHtml = data.response + "<br><br>";
+            data.schedules.forEach((s) => {
+              scheduleHtml += `
+                        <div class="schedule-item p-2 my-1 border-b">
+                            <span class="font-medium">${s.id}. ${
+                s.task
+              }</span><br>
+                            <span class="text-sm">Date: ${s.date}</span>
+                            <button onclick="markComplete(${s.id})" 
+                                    class="float-right text-xs ${
+                                      s.completed
+                                        ? "text-green-500"
+                                        : "text-blue-500"
+                                    }">
+                                ${s.completed ? "✓ Completed" : "Mark Complete"}
+                            </button>
+                        </div>`;
+            });
+            addMessage(false, scheduleHtml);
+          }
+          // Handle date request
+          else if (data.needs_date) {
+            addMessage(false, data.response);
+            pendingTaskContext = message; // Store the context for the task
+            showDatePicker();
+          }
+          // Handle normal responses
+          else {
+            addMessage(false, data.response);
+          }
+        } catch (error) {
+          removeLoadingIndicator();
+          addMessage(false, "Sorry, I encountered an error. Please try again.");
+          console.error("Error:", error);
+        }
+      }
+
+      // Mark task as complete
+      async function markComplete(taskId) {
+        await sendMessage(`mark complete task ${taskId}`);
+      }
+
+      // Handle date confirmation
+      async function confirmDate() {
+        if (pendingTaskContext) {
+          const selectedDate = dateSelector.value;
+          const formattedDate = new Date(selectedDate)
+            .toISOString()
+            .split("T")[0];
+
+          // Send both the original message and the date
+          await sendMessage(`${pendingTaskContext} on ${formattedDate}`);
+
+          // Reset context and hide date picker
+          pendingTaskContext = null;
+          hideDatePicker();
+        }
+      }
+
+      // Export data
+      async function exportData() {
+        try {
+          const response = await fetch(`/api/export?user_id=${userId}`);
+          const data = await response.json();
+
+          // Create download link
+          const blob = new Blob([JSON.stringify(data, null, 2)], {
+            type: "application/json",
+          });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `cleaning_schedule_${userId}.json`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+
+          addMessage(false, "Your data has been exported successfully!");
+        } catch (error) {
+          addMessage(false, "Failed to export data. Please try again.");
+          console.error("Export error:", error);
+        }
+      }
+
+      // Event listeners
+      sendBtn.addEventListener("click", () => {
+        const message = userInput.value.trim();
+        if (message) {
+          sendMessage(message);
+        }
+      });
+
+      userInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+          const message = userInput.value.trim();
+          if (message) {
+            sendMessage(message);
+          }
+        }
+      });
+
+      showScheduleBtn.addEventListener("click", () => {
+        sendMessage("When did I schedule my cleaning");
+      });
+
+      exportBtn.addEventListener("click", exportData);
+
+      dateConfirmBtn.addEventListener("click", confirmDate);
+
+      // Set focus to input field on page load
+      userInput.focus();
+    </script>
+  </body>
+</html>
