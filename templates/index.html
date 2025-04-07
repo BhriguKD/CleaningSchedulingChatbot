@@ -4,27 +4,60 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cleaning Scheduler</title>
-    <link
-      href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css"
-      rel="stylesheet"
-    />
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <style>
-      .schedule-item {
-        background-color: #f8f9fa;
-        border-radius: 4px;
+      body {
+        /* background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); */
+        min-height: 100vh;
       }
-      .schedule-item:hover {
-        background-color: #e9ecef;
+
+      .glass-card {
+        background: rgba(255, 255, 255, 0.25);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border-radius: 16px;
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.3);
       }
+
+      .glass-bubble {
+        background: rgba(255, 255, 255, 0.4);
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+      }
+
+      .user-bubble {
+        background: rgba(99, 102, 241, 0.7);
+        color: white;
+      }
+
       .chat-container {
-        height: calc(100vh - 200px);
+        height: 70vh;
         overflow-y: auto;
         scroll-behavior: smooth;
       }
+
+      .chat-container::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      .chat-container::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 10px;
+      }
+
+      .chat-container::-webkit-scrollbar-thumb {
+        background: rgba(99, 102, 241, 0.5);
+        border-radius: 10px;
+      }
+
       .loading-dots:after {
         content: " .";
         animation: dots 1s steps(5, end) infinite;
       }
+
       @keyframes dots {
         0%,
         20% {
@@ -41,46 +74,60 @@
           content: "";
         }
       }
+
       .date-input {
         max-height: 0;
         overflow: hidden;
         transition: max-height 0.3s ease-out;
       }
+
       .date-input.active {
         max-height: 150px;
         transition: max-height 0.3s ease-in;
       }
+
+      .gradient-text {
+        background: linear-gradient(180deg, #b5daff 0%, #edf7ff 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+
+      .btn-glow:hover {
+        box-shadow: 0 0 15px rgba(99, 102, 241, 0.5);
+      }
     </style>
   </head>
-  <body class="bg-gray-100 h-screen">
+  <body
+    class="font-sans bg-[linear-gradient(60deg,_rgb(247,149,51),_rgb(243,112,85),_rgb(239,78,123),_rgb(161,102,171),_rgb(80,115,184),_rgb(16,152,173),_rgb(7,179,155),_rgb(111,186,130))]"
+  >
     <div class="container mx-auto px-4 py-8 max-w-3xl">
       <header class="text-center mb-8">
-        <h1 class="text-3xl font-bold text-indigo-700">
-          Cleaning Scheduler Assistant
+        <h1 class="text-4xl h-16 font-bold gradient-text mb-2">
+          Cleaning Scheduler Chatbot
         </h1>
-        <p class="text-gray-600">
-          Powered By <br />
-          Anurag Sharma (12306403), Bhrigu Kumar Deka (12307066), Sayoun Parui
-          (12306183)
+        <p class="text-white glass-bubble inline-block px-4 py-2">
+          Presented by Anurag Sharma (12306403), Bhrigu Kumar Deka (12307066),
+          Sayoun Parui (12306183)
         </p>
       </header>
 
-      <div class="bg-white rounded-lg shadow-lg overflow-hidden">
-        <div id="chat-container" class="chat-container p-4 bg-gray-50">
-          <div class="flex mb-4">
+      <div class="glass-card overflow-hidden">
+        <div id="chat-container" class="chat-container p-6 space-y-4">
+          <div class="flex">
             <div class="flex-shrink-0 mr-3">
               <div
-                class="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center text-white font-bold"
+                class="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center text-white font-bold shadow-md"
               >
                 CS
               </div>
             </div>
-            <div class="bg-indigo-100 rounded-lg py-2 px-4 max-w-md">
-              <p>
+            <div class="glass-bubble py-3 px-4 max-w-md">
+              <p class="text-gray-800">
                 Hi there! I'm your cleaning scheduler assistant. How can I help
                 you today?
               </p>
-              <p class="text-xs text-gray-500 mt-1">
+              <p class="text-xs text-gray-600 mt-1">
                 Try saying "Schedule bathroom cleaning for next Tuesday" or
                 "Show my schedule"
               </p>
@@ -88,21 +135,24 @@
           </div>
         </div>
 
-        <div class="border-t p-4 bg-white">
-          <div id="date-input" class="date-input mb-3">
+        <div class="border-t z-40 border-white/20 p-6 bg-white/10">
+          <div id="date-input" class="date-input mb-4">
             <div class="flex flex-col">
-              <label for="date-selector" class="text-sm text-gray-600 mb-1"
-                >Select a date for your task:</label
+              <label
+                for="date-selector"
+                class="text-sm text-gray-700 mb-1 font-medium"
               >
+                Select a date for your task:
+              </label>
               <div class="flex">
                 <input
                   type="date"
                   id="date-selector"
-                  class="flex-grow border rounded-l-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  class="flex-grow border border-white/30 bg-white/20 rounded-l-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-gray-700"
                 />
                 <button
                   id="date-confirm-btn"
-                  class="bg-indigo-600 text-white px-4 py-2 rounded-r-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  class="bg-indigo-600/90 text-white px-4 py-2 rounded-r-lg hover:bg-indigo-700/90 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all btn-glow"
                 >
                   Confirm
                 </button>
@@ -115,28 +165,53 @@
               id="user-input"
               type="text"
               placeholder="Type your message here..."
-              class="flex-grow border rounded-l-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              class="text-white flex-grow border border-white/30 bg-white/20 rounded-l-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-gray-700 placeholder-gray-200"
             />
             <button
               id="send-btn"
-              class="bg-indigo-600 text-white px-4 py-2 rounded-r-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              class="bg-indigo-600/90 text-white px-4 py-2 rounded-r-lg hover:bg-indigo-700 focus:outline-none  focus:ring-2 focus:ring-indigo-500/50 transition-all btn-glow"
             >
-              Send
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-5 w-5"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z"
+                  clip-rule="evenodd"
+                />
+              </svg>
             </button>
           </div>
 
-          <div class="flex justify-between mt-2">
+          <div class="flex justify-between mt-3">
             <button
               id="show-schedule-btn"
-              class="text-sm text-indigo-600 hover:text-indigo-800"
+              class="text-sm text-white hover:text-indigo-900 font-medium bg-white/30 hover:bg-white/40 px-3 py-1 rounded-lg transition-all"
             >
               Show Schedule
             </button>
             <button
               id="export-btn"
-              class="text-sm text-indigo-600 hover:text-indigo-800"
+              class="text-sm text-white hover:text-indigo-900 font-medium bg-white/30 hover:bg-white/40 px-3 py-1 rounded-lg transition-all flex items-center"
             >
-              Export Data
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-4 w-4 mr-1"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                />
+              </svg>
+              Export Chat
             </button>
           </div>
         </div>
@@ -151,6 +226,9 @@
         localStorage.setItem("cleaning_scheduler_user_id", userId);
       }
 
+      // Store tasks for reference
+      let currentSchedules = [];
+
       // Get DOM elements
       const chatContainer = document.getElementById("chat-container");
       const userInput = document.getElementById("user-input");
@@ -161,13 +239,44 @@
       const dateSelector = document.getElementById("date-selector");
       const dateConfirmBtn = document.getElementById("date-confirm-btn");
 
+      // Define keywords that might indicate date needed
+      const dateKeywords = [
+        "remind",
+        "clean",
+        "on ",
+        "tomorrow",
+        "next",
+        "day",
+        "morning",
+        "evening",
+      ];
+
       // Initialize variables for context tracking
-      let pendingTaskContext = null;
+      let pendingTaskContext = "";
 
       // Set default date to tomorrow for the date picker
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
       dateSelector.valueAsDate = tomorrow;
+
+      // Function to check if a message contains date keywords but no specific date
+      function needsDatePrompt(message) {
+        const messageLower = message.toLowerCase();
+
+        // Check if message contains any date keywords
+        const hasDateKeyword = dateKeywords.some((keyword) =>
+          messageLower.includes(keyword)
+        );
+
+        // Basic check for specific date references - not comprehensive but catches common patterns
+        const hasSpecificDate =
+          /tomorrow|next\s(monday|tuesday|wednesday|thursday|friday|saturday|sunday)|on\s(monday|tuesday|wednesday|thursday|friday|saturday|sunday)|(\d{1,2}\/\d{1,2}|\d{1,2}-\d{1,2}|\d{4}-\d{2}-\d{2})/i.test(
+            messageLower
+          );
+
+        // Return true if we have keywords but no specific date
+        return hasDateKeyword && !hasSpecificDate;
+      }
 
       // Add message to chat
       function addMessage(isUser, text) {
@@ -240,12 +349,27 @@
         dateInput.classList.remove("active");
       }
 
-      // Send message to backend
-      async function sendMessage(message) {
-        userInput.value = "";
-        addMessage(true, message);
-        addLoadingIndicator();
+      // Handle processing user input
+      async function processUserInput(message) {
+        // Check if the message needs a date prompt
+        if (needsDatePrompt(message)) {
+          pendingTaskContext = message;
+          showDatePicker();
+          // Fix: Remove loading indicator before adding date request message
+          removeLoadingIndicator();
+          addMessage(
+            false,
+            "When would you like to schedule this cleaning task?"
+          );
+          return;
+        }
 
+        // Otherwise send to the backend normally
+        await sendToBackend(message);
+      }
+
+      // Send message to backend
+      async function sendToBackend(message) {
         try {
           const response = await fetch("/api/message", {
             method: "POST",
@@ -256,29 +380,29 @@
           const data = await response.json();
           removeLoadingIndicator();
 
-          // Handle schedule display
+          // If response includes schedules, update our current schedules
           if (data.schedules) {
+            currentSchedules = data.schedules;
             let scheduleHtml = data.response + "<br><br>";
             data.schedules.forEach((s) => {
               scheduleHtml += `
-                        <div class="schedule-item p-2 my-1 border-b">
-                            <span class="font-medium">${s.id}. ${
-                s.task
-              }</span><br>
-                            <span class="text-sm">Date: ${s.date}</span>
-                            <button onclick="markComplete(${s.id})" 
-                                    class="float-right text-xs ${
-                                      s.completed
-                                        ? "text-green-500"
-                                        : "text-blue-500"
-                                    }">
-                                ${s.completed ? "✓ Completed" : "Mark Complete"}
-                            </button>
-                        </div>`;
+                <div class="schedule-item p-2 my-1 border-b">
+                  <span class="font-medium">${s.id}. ${s.task}</span><br>
+                  <span class="text-sm">Date: ${s.date}</span>
+                  <span class="float-right text-xs ${
+                    s.completed ? "text-green-500" : "text-blue-500"
+                  }">
+                    ${s.completed ? "✓ Completed" : "Pending"}
+                  </span>
+                </div>`;
             });
             addMessage(false, scheduleHtml);
           }
-          // Handle date request
+          // Check if response contains a newly created task (scheduling success)
+          else if (data.new_task || data.success) {
+            addMessage(false, data.response);
+          }
+          // Handle date request from backend
           else if (data.needs_date) {
             addMessage(false, data.response);
             pendingTaskContext = message; // Store the context for the task
@@ -295,9 +419,14 @@
         }
       }
 
-      // Mark task as complete
-      async function markComplete(taskId) {
-        await sendMessage(`mark complete task ${taskId}`);
+      // Send message (user interface action)
+      async function sendMessage(message) {
+        userInput.value = "";
+        addMessage(true, message);
+        addLoadingIndicator();
+
+        // First process on the client side to check for date keywords
+        await processUserInput(message);
       }
 
       // Handle date confirmation
@@ -308,12 +437,19 @@
             .toISOString()
             .split("T")[0];
 
-          // Send both the original message and the date
-          await sendMessage(`${pendingTaskContext} on ${formattedDate}`);
+          // Send message with the date included
+          const fullMessage = `${pendingTaskContext} on ${formattedDate}`;
 
-          // Reset context and hide date picker
-          pendingTaskContext = null;
+          // Hide date picker first
           hideDatePicker();
+
+          // Then send the message to backend
+          addMessage(true, fullMessage);
+          addLoadingIndicator();
+          await sendToBackend(fullMessage);
+
+          // Reset context
+          pendingTaskContext = "";
         }
       }
 
@@ -321,6 +457,11 @@
       async function exportData() {
         try {
           const response = await fetch(`/api/export?user_id=${userId}`);
+
+          if (!response.ok) {
+            throw new Error("Failed to export data");
+          }
+
           const data = await response.json();
 
           // Create download link
@@ -343,6 +484,11 @@
         }
       }
 
+      // Make the markComplete function available for compatibility
+      window.markComplete = function (taskId) {
+        sendMessage(`mark complete task ${taskId}`);
+      };
+
       // Event listeners
       sendBtn.addEventListener("click", () => {
         const message = userInput.value.trim();
@@ -361,7 +507,7 @@
       });
 
       showScheduleBtn.addEventListener("click", () => {
-        sendMessage("When did I schedule my cleaning");
+        sendMessage("Show my schedulings");
       });
 
       exportBtn.addEventListener("click", exportData);
@@ -370,6 +516,9 @@
 
       // Set focus to input field on page load
       userInput.focus();
+
+      // Hide the date picker on initial load
+      hideDatePicker();
     </script>
   </body>
 </html>

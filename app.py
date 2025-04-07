@@ -163,6 +163,12 @@ def extract_dates_from_text(text):
                 days_ahead += 7
             target_date = today + timedelta(days=days_ahead)
             dates.append(target_date.strftime('%Y-%m-%d'))
+            
+    # Look for ISO format dates (YYYY-MM-DD)
+    import re
+    iso_dates = re.findall(r'\d{4}-\d{2}-\d{2}', text)
+    if iso_dates:
+        dates.extend(iso_dates)
 
     return dates
 
@@ -185,7 +191,7 @@ def add_schedule(user_id, task, date):
     })
 
     save_user_data(data)
-    return True
+    return task_id
 
 
 def get_schedules(user_id):
@@ -193,6 +199,19 @@ def get_schedules(user_id):
     if user_id in data['users']:
         return data['users'][user_id]['schedules']
     return []
+
+
+def format_schedules_for_response(schedules):
+    """Format schedules for consistent API response"""
+    return [
+        {
+            "id": s.get('id', idx+1),
+            "task": s['task'],
+            "date": s['date'],
+            "completed": s['completed']
+        }
+        for idx, s in enumerate(schedules)
+    ]
 
 
 def mark_completed(user_id, task_id):
@@ -251,6 +270,20 @@ def index():
     return render_template('index.html')
 
 
+@app.route('/api/schedules', methods=['GET'])
+def get_user_schedules():
+    """New endpoint to get user schedules"""
+    user_id = request.args.get('user_id', 'default_user')
+    schedules = get_schedules(user_id)
+    
+    # Make sure schedules maintain their original IDs
+    formatted_schedules = format_schedules_for_response(schedules)
+    
+    return jsonify({
+        "schedules": formatted_schedules
+    })
+
+
 @app.route('/api/message', methods=['POST'])
 def process_message():
     data = request.json
@@ -272,16 +305,8 @@ def process_message():
                 "schedules": []
             })
 
-        # Make sure schedules maintain their original IDs
-        formatted = [
-            {
-                "id": s.get('id', idx+1),
-                "task": s['task'],
-                "date": s['date'],
-                "completed": s['completed']
-            }
-            for idx, s in enumerate(schedules)
-        ]
+        # Format schedules for consistency
+        formatted = format_schedules_for_response(schedules)
 
         response = "Here are your scheduled cleanings:"
         add_to_conversation(user_id, message, is_user=True)
@@ -300,9 +325,15 @@ def process_message():
                 response = f"Marked task {task_id} as complete!"
                 add_to_conversation(user_id, message, is_user=True)
                 add_to_conversation(user_id, response, is_user=False)
+                
+                # Get updated schedules to return
+                updated_schedules = get_schedules(user_id)
+                formatted_schedules = format_schedules_for_response(updated_schedules)
+                
                 return jsonify({
                     "response": response,
-                    "success": True
+                    "success": True,
+                    "schedules": formatted_schedules  # Return updated schedules
                 })
         except (ValueError, IndexError):
             pass
@@ -323,13 +354,20 @@ def process_message():
 
         if date:
             date_to_use = date[0] if isinstance(date, list) else date
-            add_schedule(user_id, task, date_to_use)
+            task_id = add_schedule(user_id, task, date_to_use)
             response = f"Scheduled: '{task}' for {date_to_use}. Anything else?"
             add_to_conversation(user_id, message, is_user=True)
             add_to_conversation(user_id, response, is_user=False)
+            
+            # Return success with the new task info but without detailed schedule data
             return jsonify({
                 "response": response,
-                "success": True
+                "success": True,
+                "new_task": {
+                    "id": task_id,
+                    "task": task,
+                    "date": date_to_use
+                }
             })
 
         response = "When would you like to schedule this cleaning?"
